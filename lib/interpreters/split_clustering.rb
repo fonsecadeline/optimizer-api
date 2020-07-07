@@ -307,7 +307,7 @@ module Interpreters
         c = Ai4r::Clusterers::BalancedVRPClustering.new
         c.max_iterations = options[:max_iterations]
         c.distance_matrix = options[:distance_matrix]
-        c.vehicles_infos = options[:clusters_infos]
+        c.vehicles = options[:clusters_infos]
         c.centroid_indices = options[:centroid_indices] || []
         c.on_empty = 'closest'
         c.logger = OptimizerLogger.logger
