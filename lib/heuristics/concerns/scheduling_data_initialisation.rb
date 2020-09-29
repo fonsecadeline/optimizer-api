@@ -31,6 +31,7 @@ module SchedulingDataInitialization
       original_vehicle_id = vehicle[:id].split('_').slice(0, vehicle[:id].split('_').size - 1).join('_')
       capacity = compute_capacities(vehicle[:capacities], true)
       vrp.units.reject{ |unit| capacity.has_key?(unit[:id]) }.each{ |unit| capacity[unit[:id]] = 0.0 }
+      @first_visit_available_at_day[original_vehicle_id][vehicle.global_day_index] = [] # TODO : deal with skills compatibility with this too ?
       @candidate_routes[original_vehicle_id][vehicle.global_day_index] = {
         vehicle_id: vehicle[:id],
         global_day_index: vehicle[:global_day_index],
@@ -218,8 +219,15 @@ module SchedulingDataInitialization
 
     @services_data.group_by{ |_id, data| [data[:visits_number], data[:heuristic_period]] }.each{ |parameters, set|
       visits_number, lapse = parameters
-      @max_day[visits_number] = {} unless @max_day[visits_number]
-      @max_day[visits_number][lapse] = compute_last_authorized_day(all_days, visits_number, lapse)
+      latest_day = compute_last_authorized_day(all_days, visits_number, lapse)
+
+      @candidate_routes.each{ |vehicle, data|
+        data.each_key{ |day|
+          next if day > latest_day
+
+          @first_visit_available_at_day[vehicle][day] += set.collect(&:first)
+        }
+      }
     }
   end
 

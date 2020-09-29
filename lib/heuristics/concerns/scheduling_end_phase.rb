@@ -435,10 +435,10 @@ module SchedulingEndPhase
 
   def reaffect_prohibiting_partial_assignment(still_removed)
     # allow any day to assign visits
-    copy_max_day = @max_day.deep_dup
-    @max_day.each{ |visits_number, hash_set|
-      hash_set.each{ |key, _value|
-        @max_day[visits_number][key] = @schedule_end
+    copy_available_at = @first_visit_available_at_day.deep_dup
+    @first_visit_available_at_day.each{ |vehicle, hash_set|
+      hash_set.each{ |day, _set|
+        @first_visit_available_at_day[vehicle][day] = @services_data.keys
       }
     }
 
@@ -515,7 +515,7 @@ module SchedulingEndPhase
     end
 
     # restaure right days to insert
-    @max_day = copy_max_day
+    @first_visit_available_at_day = copy_available_at
     still_removed
   end
 
