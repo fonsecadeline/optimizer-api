@@ -23,6 +23,7 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.load_vrp(self)
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result
+      puts "#{result[:unassigned].size} vs 2 expected"
       assert result[:unassigned].size <= 3
       assert_equal vrp[:services].size, result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size
       assert_equal vrp.services.sum{ |service| service[:quantities][0][:value] }, result[:routes].sum{ |route| route[:activities].sum{ |activity| activity[:service_id] ? activity[:detail][:quantities][0][:value] : 0 } } + result[:unassigned].sum{ |unassigned| unassigned[:detail][:quantities][0][:value] }
