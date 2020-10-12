@@ -108,7 +108,7 @@ module SchedulingEndPhase
       log "It is interesting to add #{id} at day #{day} on #{vehicle}", level: :debug
 
       @ids_to_renumber |= [id]
-      insert_point_in_route(@candidate_routes[vehicle][day], best_cost[1][:cost])
+      insert_point_in_route(best_cost[1][:cost])
       @output_tool&.add_single_visit(day, @services_data[id][:used_days], id, @services_data[id][:visits_number])
 
       costs = update_costs(costs, best_cost)
@@ -327,7 +327,7 @@ module SchedulingEndPhase
         }
         point_to_add = select_point(acceptable_costs, referent_route)
         @ids_to_renumber |= [point_to_add[:id]]
-        insert_point_in_route(@candidate_routes[point_to_add[:vehicle]][point_to_add[:day]], point_to_add, false)
+        insert_point_in_route(point_to_add, false)
         @output_tool&.add_single_visit(point_to_add[:day], @services_data[point_to_add[:id]][:used_days], point_to_add[:id], @services_data[point_to_add[:id]][:visits_number])
         still_removed.delete(still_removed.find{ |removed| removed.first == point_to_add[:id] })
         @uninserted.delete(@uninserted.find{ |_id, data| data[:original_service] == point_to_add[:id] }[0])
@@ -423,7 +423,7 @@ module SchedulingEndPhase
           else
             point_to_add = select_point(insertion_costs, route_data)
             inserted << point_to_add[:id]
-            insert_point_in_route(route_data, point_to_add, false)
+            insert_point_in_route(point_to_add, false)
           end
         end
       else
@@ -492,7 +492,7 @@ module SchedulingEndPhase
         to_plan = sequences.min_by{ |sequence| sequence[:cost] }
         @ids_to_renumber |= [to_plan[:service]]
         to_plan[:seq].each{ |day|
-          insert_point_in_route(@candidate_routes[to_plan[:vehicle]][day], potential_costs[to_plan[:s_i]][to_plan[:vehicle]][day], false)
+          insert_point_in_route(potential_costs[to_plan[:s_i]][to_plan[:vehicle]][day], false)
         }
         @output_tool&.insert_visits(to_plan[:vehicle], @services_data[to_plan[:service]][:used_days], to_plan[:service], @services_data[to_plan[:service]][:visits_number])
 

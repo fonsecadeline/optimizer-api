@@ -63,7 +63,7 @@ module SchedulingDataInitialization
 
         best_index = find_best_index(id, associated_route) if associated_route
         if best_index
-          insert_point_in_route(associated_route, best_index, false)
+          insert_point_in_route(best_index, false)
 
           # unlock corresponding services
           services_to_add = @services_unlocked_by[id].to_a - @uninserted.collect{ |_un, data| data[:original_service] }

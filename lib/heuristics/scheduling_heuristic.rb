@@ -688,9 +688,9 @@ module Heuristics
         started_day = impacted_days.first
         can_not_insert_more = false
         while @candidate_routes[vehicle][started_day][:current_route].map{ |stop| @services_data[stop[:id]][:exclusion_cost] }.reduce(&:+) < @candidate_routes[vehicle][started_day][:cost_fixed] || can_not_insert_more
-          inserted_id, _unlocked_ids = try_to_add_new_point(vehicle, started_day)
+          inserted, _unlocked_ids = try_to_add_new_point(vehicle, started_day)
           impacted_days |= adjust_candidate_routes(vehicle, started_day)
-          can_not_insert_more = true unless inserted_id
+          can_not_insert_more = true unless inserted
         end
 
         impacted_days.sort!.delete(started_day)
@@ -719,15 +719,15 @@ module Heuristics
           end
           break unless best_day
 
-          inserted_id, unlocked_ids = try_to_add_new_point(current_vehicle, best_day)
-          already_considered_days |= [best_day] unless inserted_id
+          inserted, unlocked_ids = try_to_add_new_point(current_vehicle, best_day)
+          already_considered_days |= [best_day] unless inserted
 
           if @spread_among_days
-            best_days.delete(best_day) unless inserted_id
+            best_days.delete(best_day) unless inserted
             best_days += already_considered_days unless unlocked_ids.empty?
             best_days, days_left_to_consider = compute_more_best_days_to_insert(current_vehicle, best_days, days_left_to_consider)
-            adjust_candidate_routes(current_vehicle, best_day)
-          elsif inserted_id.nil? || @to_plan_service_ids.empty? || @candidate_routes[current_vehicle].keys.size == already_considered_days.size
+            adjust_candidate_routes(current_vehicle, inserted[:day]) if inserted
+          elsif inserted.nil? || @to_plan_service_ids.empty? || @candidate_routes[current_vehicle].keys.size == already_considered_days.size
             impacted_days = adjust_candidate_routes(current_vehicle, best_day)
             @vehicle_day_completed[current_vehicle][best_day] = true
             ensure_routes_will_not_be_rejected(current_vehicle, impacted_days.sort) if @candidate_services_ids.size >= @services_data.size * 0.5 # shouldn't it be < ?
@@ -776,14 +776,16 @@ module Heuristics
 
       insertion_costs = compute_costs(vehicle, :id, day)
 
-      return [nil, [], []] if insertion_costs.empty?
+      return [nil, []] if insertion_costs.empty?
 
       best_index = select_point(insertion_costs, route_data[:current_route].empty?)
+      this_service_insertion_costs = compute_costs(vehicle, :day, best_index[:id]) # rename !
+      best_index = route_data[:current_route].empty? ? best_index : select_day(best_index, this_service_insertion_costs)
 
-      return [nil, [], []] if best_index.nil?
+      return [nil, []] if best_index.nil?
 
       best_index[:end] = best_index[:end] - @services_data[best_index[:id]][:group_duration] + @services_data[best_index[:id]][:durations].first if @same_point_day
-      insert_point_in_route(route_data, best_index)
+      insert_point_in_route(best_index)
 
       @to_plan_service_ids.delete(best_index[:id])
 
@@ -795,7 +797,7 @@ module Heuristics
         services_to_add
       end
 
-      [best_index[:id], unlocked_ids.to_a]
+      [best_index, unlocked_ids.to_a]
     end
 
     def compute_more_best_days_to_insert(vehicle, best_days, days_left_to_consider)
@@ -950,8 +952,9 @@ module Heuristics
       }
     end
 
-    def insert_point_in_route(route_data, point_to_add, first_visit = true)
+    def insert_point_in_route(point_to_add, first_visit = true)
       ### modify [route_data] such that [point_to_add] is in the route ###
+      route_data = @candidate_routes[point_to_add[:vehicle]][point_to_add[:day]]
       current_route = route_data[:current_route]
       @candidate_services_ids.delete(point_to_add[:id])
 
@@ -1128,16 +1131,27 @@ module Heuristics
       end
     end
 
+    def select_day(current_cost, insertion_costs)
+      id = current_cost[:id]
+      considerable = insertion_costs.select{ |cost|
+        associated_route = @candidate_routes[cost[:vehicle]][cost[:day]][:current_route]
+        !associated_route.empty? &&
+          associated_route.any?{ |stop| @services_data[stop[:id]][:heuristic_period] == @services_data[id][:heuristic_period] } &&
+          (0..associated_route.size - 2).all?{ |index| associated_route[index][:end] == associated_route[index + 1][:start] }
+      }
+      considerable.find{ |cost| cost[:additional_route_time] < current_cost[:additional_route_time] } || current_cost
+    end
+
     def try_to_insert_at(vehicle, day, service, visit_number)
       # when adjusting routes, tries to insert [service] at [day] for [vehicle]
       if !@vehicle_day_completed[vehicle][day] &&
          @services_data[service][:capacity].all?{ |need, qty| @candidate_routes[vehicle][day][:capacity_left][need] - qty >= 0 } &&
          @services_data[service][:sticky_vehicles_ids].empty? || @services_data[service][:sticky_vehicles_ids].include?(vehicle)
 
-        best_index = find_best_index(service, @candidate_routes[vehicle][day], false)
+         best_index = find_best_index(service, @candidate_routes[vehicle][day], false)
 
         if best_index
-          insert_point_in_route(@candidate_routes[vehicle][day], best_index, false)
+          insert_point_in_route(best_index, false)
           @candidate_routes[vehicle][day][:current_route].find{ |stop| stop[:id] == service }[:number_in_sequence] = visit_number
 
           day
