@@ -16,18 +16,21 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 require 'active_support/concern'
+require 'color-generator'
 
 # Second end of the algorithm after scheduling heuristic
 module SchedulingDataInitialization
   extend ActiveSupport::Concern
 
   def generate_route_structure(vrp)
+    colorgenerator = ColorGenerator.new(saturation: 0.8, value: 1.0, seed: 1)
     vrp.vehicles.each{ |vehicle|
       capacity = compute_capacities(vehicle[:capacities], true)
       vrp.units.reject{ |unit| capacity.has_key?(unit[:id]) }.each{ |unit| capacity[unit[:id]] = 0.0 }
       @candidate_routes[vehicle.original_id][vehicle.global_day_index] = {
         vehicle_id: vehicle.id,
         global_day_index: vehicle.global_day_index,
+        color: colorgenerator.create_hex,
         tw_start: (vehicle.timewindow.start < 84600) ? vehicle.timewindow.start : vehicle.timewindow.start - vehicle.global_day_index * 86400,
         tw_end: (vehicle.timewindow.end < 84600) ? vehicle.timewindow.end : vehicle.timewindow.end - vehicle.global_day_index * 86400,
         start_point_id: vehicle.start_point&.id,
