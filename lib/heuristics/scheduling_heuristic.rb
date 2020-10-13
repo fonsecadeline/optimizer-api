@@ -81,7 +81,7 @@ module Heuristics
       compute_latest_authorized
       @cost = 0
 
-      @output_tool = OptimizerWrapper.config[:debug][:output_schedule] ? OutputHelper::Scheduling.new(vrp.name, @candidate_vehicles, job, @schedule_end) : nil
+      @output_tool = OptimizerWrapper.config[:debug][:output_schedule] ? OutputHelper::Scheduling.new(vrp.name, vrp.vehicles, vrp.services, job, @schedule_end) : nil
     end
 
     def compute_initial_solution(vrp, &block)
@@ -410,6 +410,8 @@ module Heuristics
 
         used_point = day_route[:current_route][remove_index][:point_id]
         day_route[:current_route].slice!(remove_index)
+        day_route[:geojson] = @output_tool&.compute_route(route_data)
+        @output_tool&.output_geoson("removing_#{point_to_add[:id]}_in_#{route_data[:vehicle_id]}_#{route_data[:global_day]}.geojson", @candidate_routes)
         @services_data[service][:capacity].each{ |need, qty| day_route[:capacity_left][need] += qty }
 
         update_point_vehicle_and_days(used_point)
@@ -974,6 +976,9 @@ module Heuristics
 
         update_route(route_data, point_to_add[:position] + 1)
       end
+
+      route_data[:geojson] = @output_tool&.compute_route(route_data)
+      @output_tool&.output_geojson("inserting_#{point_to_add[:id]}_in_#{route_data[:vehicle_id]}_#{route_data[:global_day]}.geojson", @candidate_routes)
     end
 
     def matrix(route_data, start, arrival, dimension = :time)
