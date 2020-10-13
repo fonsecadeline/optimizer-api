@@ -118,6 +118,8 @@ module SchedulingDataInitialization
                   nil
                 elsif has_only_one_day
                   service[:minimum_lapse] ? (service[:minimum_lapse].to_f / 7).ceil * 7 : 7
+                elsif service[:minimum_lapse] && service[:maximum_lapse]
+                  (service[:minimum_lapse] + service[:maximum_lapse]) / 2
                 else
                   service[:minimum_lapse] || 1
                 end
