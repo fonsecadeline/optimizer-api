@@ -89,7 +89,7 @@ class HeuristicTest < Minitest::Test
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert_equal expecting, result[:routes].sum{ |route| route[:activities].count{ |stop| stop[:service_id] } } + result[:unassigned].size
       unassigned = result[:unassigned].size
-      assert_equal 32, unassigned
+      assert_equal 31, unassigned
 
       vrp = TestHelper.load_vrp(self)
       vrp[:configuration][:resolution][:solver] = true
@@ -258,7 +258,7 @@ class HeuristicTest < Minitest::Test
 
       # voluntarily equal to watch evolution of scheduling algorithm performance
       assert_equal expected, seen, "Should have #{expected} visits in result, only has #{seen}"
-      assert_equal 244, unassigned_visits.sum, "Expecting 244 unassigned visits, have #{unassigned_visits.sum}"
+      assert_equal 303, unassigned_visits.sum, "Expecting 244 unassigned visits, have #{unassigned_visits.sum}"
     end
 
     def test_minimum_stop_in_route
@@ -274,7 +274,7 @@ class HeuristicTest < Minitest::Test
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert result[:routes].all?{ |r| (r[:activities].size - 2).zero? || r[:activities].size - 2 >= 5 }, 'Expecting no route with less than 5 stops unless it is empty'
       assert_operator(should_remain_assigned, :<=, result[:routes].sum{ |r| r[:activities].size - 2 })
-      assert_equal 19, result[:unassigned].size
+      assert_equal 18, result[:unassigned].size
       assert_equal vrp.visits, result[:routes].sum{ |r| r[:activities].count{ |a| a[:service_id] } } + result[:unassigned].size
 
       all_ids = result[:routes].collect{ |route| route[:activities].collect{ |stop| stop[:service_id] } } + result[:unassigned].collect{ |un| un[:service_id] }
@@ -300,7 +300,7 @@ class HeuristicTest < Minitest::Test
 
       # voluntarily equal to watch evolution of scheduling algorithm performance
       assert_equal expected, seen, "Should have #{expected} visits in result, only has #{seen}"
-      assert_equal 278, unassigned_visits.sum, "Expecting 278 unassigned visits, have #{unassigned_visits.sum}"
+      assert_equal 291, unassigned_visits.sum, "Expecting 278 unassigned visits, have #{unassigned_visits.sum}"
     end
 
     def test_fill_days_and_post_processing

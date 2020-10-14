@@ -330,7 +330,7 @@ module SchedulingEndPhase
         insert_point_in_route(@candidate_routes[point_to_add[:vehicle]][point_to_add[:day]], point_to_add, false)
         @output_tool&.add_single_visit(point_to_add[:day], @services_data[point_to_add[:id]][:used_days], point_to_add[:id], @services_data[point_to_add[:id]][:visits_number])
         still_removed.delete(still_removed.find{ |removed| removed.first == point_to_add[:id] })
-        @uninserted.delete(@uninserted.find{ |_id, data| data[:original_service] == to_plan[:service] }[0])
+        @uninserted.delete(@uninserted.find{ |_id, data| data[:original_service] == point_to_add[:id] }[0])
       end
     end
 

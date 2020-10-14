@@ -685,14 +685,16 @@ module Heuristics
 
         possible_to_fill = !@to_plan_service_ids.empty?
         already_considered_days = []
-        nb_of_days = @candidate_routes[current_vehicle].keys.size
+        best_days, days_left_to_consider = compute_more_best_days_to_insert(current_vehicle, [], @candidate_routes[current_vehicle].keys) if @spread_among_days
         impacted_days = []
 
         while possible_to_fill
           best_day = if @spread_among_days
-            @candidate_routes[current_vehicle].reject{ |day, _route| already_considered_days.include?(day) }.min_by{ |_day, route_data|
-              route_data[:current_route].empty? ? 0 : route_data[:current_route].sum{ |stop| stop[:end] - stop[:start] }
-            }[0]
+            best_days.min_by{ |day|
+              current_route = @candidate_routes[current_vehicle][day][:current_route]
+              (current_route.empty? ? 0 : current_route.sum{ |stop| stop[:end] - stop[:start] }) / [@candidate_routes[current_vehicle][day][:available_ids].size, 0.001].max 
+              # TODO : if route size is the same, chose soonest
+            }
           else
               best_day || (@candidate_routes[current_vehicle].keys - already_considered_days).min
           end
@@ -701,12 +703,12 @@ module Heuristics
           inserted_id, unlocked_ids = try_to_add_new_point(current_vehicle, best_day)
           already_considered_days |= [best_day] unless inserted_id
 
-          possible_to_fill = false if @to_plan_service_ids.empty? || nb_of_days == already_considered_days.size
-
           if @spread_among_days
-            already_considered_days = [] unless unlocked_ids.empty?
+            best_days.delete(best_day) unless inserted_id
+            best_days += already_considered_days unless unlocked_ids.empty?
+            best_days, days_left_to_consider = compute_more_best_days_to_insert(current_vehicle, best_days, days_left_to_consider)
             adjust_candidate_routes(current_vehicle, best_day)
-          elsif inserted_id.nil? || !possible_to_fill
+          elsif inserted_id.nil? || @to_plan_service_ids.empty? || @candidate_routes[current_vehicle].keys.size == already_considered_days.size
             impacted_days = adjust_candidate_routes(current_vehicle, best_day)
             @vehicle_day_completed[current_vehicle][best_day] = true
             ensure_routes_will_not_be_rejected(current_vehicle, impacted_days.sort) if @candidate_services_ids.size >= @services_data.size * 0.5 # shouldn't it be < ?
@@ -719,6 +721,8 @@ module Heuristics
 
             current_vehicle = @candidate_routes.keys[current_vehicle_index]
           end
+
+          possible_to_fill = false if @to_plan_service_ids.empty? || (@spread_among_days && best_days.empty?)
         end
       }
     end
@@ -773,6 +777,16 @@ module Heuristics
       end
 
       [best_index[:id], unlocked_ids.to_a]
+    end
+
+    def compute_more_best_days_to_insert(vehicle, best_days, days_left_to_consider)
+      while best_days.size < 5 && days_left_to_consider.size.positive?
+        biggest_set_size = days_left_to_consider.collect{ |day| @candidate_routes[vehicle][day][:available_ids].size }.max
+        best_days += days_left_to_consider.select{ |day| @candidate_routes[vehicle][day][:available_ids].size >= biggest_set_size }
+        days_left_to_consider -= best_days
+      end
+
+      [best_days, days_left_to_consider]
     end
 
     def get_previous_info(route_data, position)
