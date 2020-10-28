@@ -58,6 +58,7 @@ module Heuristics
 
       # heuristic options
       @allow_partial_assignment = vrp.resolution_allow_partial_assignment
+      @first_step = true
       @same_point_day = vrp.resolution_same_point_day
       @spread_among_days = !vrp.resolution_minimize_used_days
       @relaxed_same_point_day = false
@@ -95,6 +96,8 @@ module Heuristics
 
       fill_days
 
+      @first_step = false
+
       # Relax same_point_day constraint
       if @same_point_day && !@candidate_services_ids.empty?
         # If there are still unassigned visits
@@ -104,8 +107,9 @@ module Heuristics
         @to_plan_service_ids = @candidate_services_ids
         @same_point_day = false
         @relaxed_same_point_day = true
-        fill_days
       end
+
+      fill_days
 
       save_status
 
