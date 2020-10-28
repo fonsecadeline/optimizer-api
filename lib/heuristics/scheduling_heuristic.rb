@@ -1086,9 +1086,8 @@ module Heuristics
         else
           # chose distant service with highest frequency
           # max_priority + 1 so that priority never equal to max_priority and no multiplication by 0
-          highest_frequency = insertion_costs.collect{ |cost| @services_data[cost[:id]][:visits_number] }.max
           referents = @candidate_routes.collect{ |_vehicle, data| data.collect{ |_day, day_route| day_route[:current_route].empty? ? nil : day_route[:current_route].max_by{ |stop| matrix(day_route, day_route[:start_point_id], stop[:point_id]) + matrix(day_route, stop[:point_id], day_route[:end_point_id]) }[:point_id] } }.flatten.compact
-          return insertion_costs.select{ |cost| @services_data[cost[:id]][:visits_number] == highest_frequency }.max_by{ |s| (1 - (@services_data[s[:id]][:priority].to_f + 1) / @max_priority + 1) * referents.collect{ |ref| matrix(@candidate_routes[@candidate_routes.keys.first].first[1], ref, s[:point]) }.min * @services_data[s[:id]][:visits_number]**2 }
+          return insertion_costs.max_by{ |s| (1 - (@services_data[s[:id]][:priority].to_f + 1) / @max_priority + 1) * referents.collect{ |ref| matrix(@candidate_routes[@candidate_routes.keys.first].first[1], ref, s[:point]) }.min * @services_data[s[:id]][:visits_number]**2 }
         end
       end
 
