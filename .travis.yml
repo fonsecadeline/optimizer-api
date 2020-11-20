@@ -15,6 +15,7 @@ jobs:
       install: skip
       env: TEST_SUITE='basis'
       script: bash ci-utils/tests.sh ${TEST_SUITE}
+      if: type != push
     #   It requires to have an upgraded travis plan or to point our own CI environment
     # - env: TEST_SUITE='dicho'
     #   install: skip
