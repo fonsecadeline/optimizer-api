@@ -204,7 +204,11 @@ module PeriodicDataInitialization
     }
 
     @indices.each_key{ |point_id|
-      @points_vehicles_and_days[point_id] = { vehicles: [], days: [], maximum_visits_number: 0 }
+      @assignment_details[point_id] = {
+        vehicles: [],         # vehicles used to assign this point_id
+        days: [],             # days used to assign this point_id
+        ids_visits_number: [] # list of ids at this point that are already assignedn with their visits_number
+      }
     }
   end
 

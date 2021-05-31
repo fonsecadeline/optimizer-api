@@ -107,7 +107,7 @@ class HeuristicTest < Minitest::Test
 
       p_v_d = {}
       vrp.points.each{ |pt| p_v_d[pt[:id]] = { days: [], vehicles: [] } }
-      s.instance_variable_set(:@points_vehicles_and_days, p_v_d)
+      s.instance_variable_set(:@assignment_details, p_v_d)
       s.instance_variable_set(
         :@candidate_routes,
         'vehicle_0' => {
@@ -140,7 +140,7 @@ class HeuristicTest < Minitest::Test
       s = Wrappers::PeriodicHeuristic.new(vrp)
       p_v_d = {}
       vrp.points.each{ |pt| p_v_d[pt[:id]] = { days: [], vehicles: [] } }
-      s.instance_variable_set(:@points_vehicles_and_days, p_v_d)
+      s.instance_variable_set(:@assignment_details, p_v_d)
       s.instance_variable_set(:@candidate_routes,
                               'vehicle_0' => {
                                 0 => {
@@ -199,7 +199,7 @@ class HeuristicTest < Minitest::Test
       vehicule = { matrix_id: vrp.vehicles.first.start_point.matrix_index }
       p_v_d = {}
       vrp.points.each{ |pt| p_v_d[pt[:id]] = { days: [], vehicles: [] } }
-      s.instance_variable_set(:@points_vehicles_and_days, p_v_d)
+      s.instance_variable_set(:@assignment_details, p_v_d)
       s.instance_variable_set(:@candidate_routes,
                               'vehicle_0' => {
                                 0 => {
@@ -224,7 +224,7 @@ class HeuristicTest < Minitest::Test
       vehicule = { matrix_id: vrp.vehicles.first[:start_point][:matrix_index] }
       p_v_d = {}
       vrp.points.each{ |pt| p_v_d[pt[:id]] = { days: [], vehicles: [] } }
-      s.instance_variable_set(:@points_vehicles_and_days, p_v_d)
+      s.instance_variable_set(:@assignment_details, p_v_d)
       s.instance_variable_set(:@candidate_routes,
                               'vehicle_0' => {
                                 0 => {
@@ -563,7 +563,7 @@ class HeuristicTest < Minitest::Test
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
       s = Wrappers::PeriodicHeuristic.new(vrp)
 
-      s.instance_variable_set(:@points_vehicles_and_days, { 'point_0' => { days: [0, 2, 4, 6] }})
+      s.instance_variable_set(:@assignment_details, { 'point_0' => { days: [0, 2, 4, 6] }})
       s.instance_variable_set(:@unlocked, ['id'])
       vrp.services.first.visits_number = 2
       s.instance_variable_set(:@services_data, { 'id' => { heuristic_period: 3, raw: vrp.services.first }})
