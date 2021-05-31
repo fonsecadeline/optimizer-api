@@ -83,6 +83,18 @@ module PeriodicDataInitialization
       plan_routes_missing_in_routes(defined_route.vehicle_id, defined_route.day_index.to_i)
     }
 
+    # some considered_ids may have been assigned to no route
+    # we should reject them all, because constraint on this service is not feasible
+    considered_ids.each{ |id|
+      next if @services_data[id][:used_days].any?
+
+      @uninserted.delete_if{ |u| u[0] == id }
+      reject_all_visits(id, @services_data[id][:raw].visits_number,
+                        'At least one of this service visits could not be assigned to provided route.' \
+                        'Assigning this service might create unconsistency.')
+    }
+
+
     # TODO : try to affect missing visits with add_missing visits functions
 
     @uninserted.group_by{ |_k, v| v[:original_id] }.each{ |id, set|
@@ -141,6 +153,7 @@ module PeriodicDataInitialization
         points_ids: service.activity ? [service.activity.point.id || service.activity.point.matrix_id] : service.activities.collect{ |a| a.point.id || a.point.matrix_id },
         tws_sets: service.activity ? [service.activity.timewindows] : service.activities.collect(&:timewindows),
         used_days: [],
+        already_tested_days: [],
         used_vehicles: [],
         priority: service.priority,
         sticky_vehicles_ids: service.sticky_vehicles.collect(&:id),

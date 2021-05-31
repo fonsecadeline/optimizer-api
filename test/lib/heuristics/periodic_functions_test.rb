@@ -203,6 +203,7 @@ class HeuristicTest < Minitest::Test
       s.instance_variable_set(:@candidate_routes,
                               'vehicle_0' => {
                                 0 => {
+                                  available_ids: [],
                                   stops: [{ id: 'service_1', point_id: 'point_0', requirement: :neutral }, { id: 'service_2', point_id: 'point_0', requirement: :never_first }], vehicle: vehicule
                                 }
                               })
@@ -228,6 +229,7 @@ class HeuristicTest < Minitest::Test
       s.instance_variable_set(:@candidate_routes,
                               'vehicle_0' => {
                                 0 => {
+                                  available_ids: [],
                                   stops: [{ id: 'service_1', point_id: 'point_0', requirement: :never_last }, { id: 'service_2', point_id: 'point_0', requirement: :neutral }], vehicle: vehicule
                                 }
                               })

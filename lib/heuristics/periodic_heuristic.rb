@@ -451,11 +451,15 @@ module Wrappers
 
     def clean_stops(service_id, vehicle_id, reason, reaffect = false)
       ### when allow_partial_assignment is false, removes all affected visits of [service_id] because we can not affect all visits ###
+      removed = false
       @candidate_routes[vehicle_id].collect{ |day, route_data|
         remove_index = route_data[:stops].find_index{ |stop| stop[:id] == service_id }
         next unless remove_index
 
+        removed = true
+
         used_point = route_data[:stops][remove_index][:point_id]
+        @services_data[service_id][:already_tested_days] |= [day] if route_data[:stops][remove_index][:number_in_sequence] == 1
         route_data[:stops].slice!(remove_index)
         @services_data[service_id][:capacity].each{ |need, qty| route_data[:capacity_left][need] += qty }
 
@@ -467,12 +471,13 @@ module Wrappers
       }.compact.size
 
       if reaffect
-        @candidate_services_ids << service_id
+        @used_to_adjust.delete(service_id)
+        @candidate_services_ids << service_id if removed
         @candidate_routes.each{ |_vehicle_id, all_routes|
           all_routes.each{ |day, route_data|
             next unless day <= @services_data[service_id][:raw].last_possible_days.first # first is for first visit
 
-            route_data[:available_ids] |= service_id
+            route_data[:available_ids] << service_id if removed
           }
         }
         @uninserted.each{ |uninserted_id, info|
@@ -858,7 +863,8 @@ module Wrappers
     end
 
     def compatible_days(service_id, day)
-      !@services_data[service_id][:raw].unavailable_days.include?(day)
+      !@services_data[service_id][:raw].unavailable_days.include?(day) &&
+        !@services_data[service_id][:already_tested_days].include?(day)
     end
 
     def compatible_vehicle(service_id, route_data)
