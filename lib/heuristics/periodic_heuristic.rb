@@ -208,15 +208,15 @@ module Wrappers
 
     private
 
-    def reject_according_to_allow_partial_assignment(service_id, vehicle_id, impacted_days, visit_number)
+    def reject_according_to_allow_partial_assignment(service_id, vehicle_id, impacted_days, visit_number, reason)
       if @allow_partial_assignment
         @uninserted["#{service_id}_#{visit_number}_#{@services_data[service_id][:raw].visits_number}"] = {
           original_id: service_id,
-          reason: "Visit not assignable by heuristic, first visit assigned at day #{@services_data[service_id][:used_days].min}"
+          reason: reason
         }
         [true, impacted_days, false]
       else
-        clean_stops(service_id, vehicle_id)
+        clean_stops(service_id, vehicle_id, 'Partial assignment only', reason)
         [false, [], true]
       end
     end
@@ -251,7 +251,8 @@ module Wrappers
           impacted_days |= [inserted_day]
         else
           need_to_add_visits, impacted_days, cleaned_service =
-            reject_according_to_allow_partial_assignment(service_id, vehicle_id, impacted_days, visit_number)
+            reject_according_to_allow_partial_assignment(service_id, vehicle_id, impacted_days, visit_number,
+                                                         'Visit not assignable regarding first visit day')
         end
       }
 
@@ -436,19 +437,19 @@ module Wrappers
       if removed_index == stops.size
         index = removed_index - 1
         while stops[index] && [:never_last, :always_middle].include?(stops[index][:requirement])
-          clean_stops(stops[index][:id], vehicle_id, true)
+          clean_stops(stops[index][:id], vehicle_id, 'Partial assignment only', true)
           # index removed so no need to increment index
         end
       end
 
       index = removed_index
       while stops[index] && [:never_first, :always_middle].include?(stops[index][:requirement])
-        clean_stops(stops[index][:id], vehicle_id, true)
+        clean_stops(stops[index][:id], vehicle_id, 'Partial assignment only', true)
         # index removed so no need to increment index
       end
     end
 
-    def clean_stops(service_id, vehicle_id, reaffect = false)
+    def clean_stops(service_id, vehicle_id, reason, reaffect = false)
       ### when allow_partial_assignment is false, removes all affected visits of [service_id] because we can not affect all visits ###
       @candidate_routes[vehicle_id].collect{ |day, route_data|
         remove_index = route_data[:stops].find_index{ |stop| stop[:id] == service_id }
@@ -478,7 +479,7 @@ module Wrappers
           @uninserted.delete(uninserted_id) if info[:original_id] == service_id
         }
       else
-        reject_all_visits(service_id, @services_data[service_id][:raw].visits_number, 'Partial assignment only')
+        reject_all_visits(service_id, @services_data[service_id][:raw].visits_number, reason)
       end
 
       return if reaffect

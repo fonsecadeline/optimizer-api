@@ -119,7 +119,7 @@ class HeuristicTest < Minitest::Test
           }
         }
       )
-      s.send(:clean_stops, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:stops].first[:id], 'vehicle_0')
+      s.send(:clean_stops, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:stops].first[:id], 'vehicle_0', 'reason')
       assert_equal 0, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:stops].size
       assert_equal 0, s.instance_variable_get(:@candidate_routes)['vehicle_0'][7][:stops].size
     end
@@ -158,7 +158,7 @@ class HeuristicTest < Minitest::Test
                             })
       data_services = s.instance_variable_get(:@services_data)
       assert_equal 3, data_services['service_1'][:heuristic_period]
-      s.send(:clean_stops, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:stops].first[:id], 'vehicle_0')
+      s.send(:clean_stops, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:stops].first[:id], 'vehicle_0', 'reason')
       assert(s.instance_variable_get(:@candidate_routes).all?{ |_key, data| data.all?{ |_k, d| d[:stops].empty? } })
     end
 
@@ -210,7 +210,7 @@ class HeuristicTest < Minitest::Test
       s.instance_variable_get(:@candidate_services_ids).delete('service_1')
       s.instance_variable_get(:@candidate_services_ids).delete('service_2')
       assert_equal vrp.services.size - 2, s.instance_variable_get(:@candidate_services_ids).size
-      s.send(:clean_stops, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:stops].first[:id], 'vehicle_0')
+      s.send(:clean_stops, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:stops].first[:id], 'vehicle_0', 'reason')
       assert_equal 0, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:stops].size
       assert(s.instance_variable_get(:@uninserted).none?{ |id, _info| id.include?('service_2') })
       assert_equal vrp.services.size - 1, s.instance_variable_get(:@candidate_services_ids).size # service 2 can be assigned again
@@ -233,7 +233,7 @@ class HeuristicTest < Minitest::Test
                               })
       s.instance_variable_get(:@candidate_services_ids).delete('service_1')
       s.instance_variable_get(:@candidate_services_ids).delete('service_2')
-      s.send(:clean_stops, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:stops][1][:id], 'vehicle_0')
+      s.send(:clean_stops, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:stops][1][:id], 'vehicle_0', 'reason')
       assert_equal 0, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:stops].size
       assert_equal vrp.services.size - 1, s.instance_variable_get(:@candidate_services_ids).size # service 1 can be assigned again
     end

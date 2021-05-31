@@ -238,11 +238,8 @@ module PeriodicEndPhase
             }
           else
             locally_removed.each{ |removed_id, _number_in_sequence|
-              clean_stops(removed_id, vehicle, false)
+              clean_stops(removed_id, vehicle, 'Unaffected because route was underfilled', false)
               (1..@services_data[removed_id][:raw].visits_number).each{ |visit|
-                uninserted_id = "#{removed_id}_#{visit}_#{@services_data[removed_id][:raw].visits_number}"
-                @uninserted[uninserted_id][:reason] = 'Unaffected because route was underfilled'
-
                 next if visit == 1
 
                 removed << [removed_id, visit]
