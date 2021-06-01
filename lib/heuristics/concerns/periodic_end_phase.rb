@@ -219,33 +219,18 @@ module PeriodicEndPhase
 
           smth_removed = true
           locally_removed = route_data[:stops].collect{ |stop|
-            @services_data[stop[:id]][:used_days].delete(day)
-            @output_tool&.remove_visits([day], @services_data[stop[:id]][:used_days], stop[:id], @services_data[stop[:id]][:raw].visits_number)
+            remove_point_from_route(vehicle, day, stop[:id], 'Unaffected because route was underfilled')
             [stop[:id], stop[:number_in_sequence]]
-          }
-          route_data[:stops] = []
-          route_data[:capacity].each{ |unit, qty|
-            route_data[:capacity_left][unit] = qty
           }
           removed += locally_removed
 
-          if @allow_partial_assignment
-            locally_removed.each{ |removed_id, number_in_sequence|
-              @uninserted["#{removed_id}_#{number_in_sequence}_#{@services_data[removed_id][:raw].visits_number}"] = {
-                original_id: removed_id,
-                reason: 'Unaffected because route was underfilled'
-              }
-            }
-          else
-            locally_removed.each{ |removed_id, _number_in_sequence|
-              clean_stops(removed_id, vehicle, 'Unaffected because route was underfilled', false)
-              (1..@services_data[removed_id][:raw].visits_number).each{ |visit|
-                next if visit == 1
+          next if @allow_partial_assignment
 
-                removed << [removed_id, visit]
-              }
+          locally_removed.group_by{ |values| values[0] }.each_key{ |removed_id|
+            (1..@services_data[removed_id][:raw].visits_number).each{ |visit|
+              removed |= [[removed_id, visit]]
             }
-          end
+          }
         }
       }
 
