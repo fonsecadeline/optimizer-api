@@ -44,7 +44,9 @@ module Interpreters
       vrp.relations = generate_relations(vrp)
       vrp.rests = []
       vrp.vehicles = generate_vehicles(vrp).sort{ |a, b|
-        (a.global_day_index && b.global_day_index && a.global_day_index != b.global_day_index) ? a.global_day_index <=> b.global_day_index : a.id <=> b.id
+        a.global_day_index && b.global_day_index && a.global_day_index != b.global_day_index ?
+          a.global_day_index <=> b.global_day_index :
+          a.id <=> b.id
       }
 
       if vrp.periodic_heuristic?
