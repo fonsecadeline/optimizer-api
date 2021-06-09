@@ -55,22 +55,22 @@ module PeriodicDataInitialization
     routes.sort_by(&:day_index).each{ |defined_route|
       associated_route = @candidate_routes[defined_route.vehicle_id][defined_route.day_index.to_i]
       defined_route.mission_ids.each{ |id|
-        next if !@services_data.has_key?(id) # id has been removed when detecting unfeasible services in wrapper
+        next if !@services_data.key?(id) # id has been removed when detecting unfeasible services in wrapper
 
         best_index = find_best_index(id, associated_route, false) if associated_route
         considered_ids << id
         if best_index
-          insert_point_in_route(associated_route, best_index, false)
+          insert_point_in_route(associated_route, best_index, false, considered_ids.count(id))
 
           # unlock corresponding services
-          services_to_add = @services_unlocked_by[id].to_a - @uninserted.collect{ |_un, data| data[:original_id] }
+          services_to_add = @services_unlocked_by[id].to_a - @uninserted.collect{ |un_id, _v_nb, _r| un_id }
           @to_plan_service_ids += services_to_add
           @unlocked += services_to_add
         else
-          @uninserted["#{id}_#{considered_ids.count(id)}_#{@services_data[id][:raw].visits_number}"] = {
-            original_id: id,
-            reason: "Can not add this service to route (vehicle #{defined_route.vehicle_id}, day #{defined_route.day_index}) : already #{associated_route ? associated_route[:stops].size : 0} elements in route"
-          }
+          nb_elements = associated_route ? associated_route[:stops].size : 0
+          @uninserted << [id, considered_ids.count(id),
+                          "Can not add this service to route (vehicle #{defined_route.vehicle_id}," \
+                          "day #{defined_route.day_index}) : already #{nb_elements} elements in route"]
         end
 
         @candidate_services_ids.delete(id)
@@ -97,13 +97,9 @@ module PeriodicDataInitialization
 
     # TODO : try to affect missing visits with add_missing visits functions
 
-    @uninserted.group_by{ |_k, v| v[:original_id] }.each{ |id, set|
-      (set.size + 1..@services_data[id][:raw].visits_number).each{ |visit|
-        @uninserted["#{id}_#{visit}_#{@services_data[id][:raw].visits_number}"] = {
-          original_id: id,
-          reason: 'Routes provided do not allow to assign this visit because previous visit could not be planned in specified route'
-        }
-      }
+    @uninserted.each{ |uninserted_info|
+      uninserted_info[2] = 'Routes provided do not allow to assign this visit because' \
+                           'previous visit could not be planned in specified route'
     }
   end
 
@@ -155,6 +151,7 @@ module PeriodicDataInitialization
         used_days: [],
         already_tested_days: [],
         used_vehicles: [],
+        assigned_visits: [],
         priority: service.priority,
         sticky_vehicles_ids: service.sticky_vehicles.collect(&:id),
         positions_in_route: service.activity ? [service.activity.position] : service.activities.collect(&:position),

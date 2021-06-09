@@ -185,7 +185,7 @@ class HeuristicTest < Minitest::Test
                                candidate_services_ids.sum{ |id| s.instance_variable_get(:@services_data)[id][:raw].visits_number }
       assert starting_with >= s.instance_variable_get(:@uninserted).size
 
-      all_ids = (uninserted.keys +
+      all_ids = (uninserted.collect{ |un| "#{un[0]}_#{un[1]}_#{services_data[un[0]][:raw].visits_number}" } +
                  candidate_routes.collect{ |_v, d| d.collect{ |_day, route_day| route_day[:stops].collect{ |stop| "#{stop[:id]}_#{stop[:number_in_sequence]}_#{services_data[stop[:id]][:raw].visits_number}" } } } +
                  candidate_services_ids.collect{ |id| (1..services_data[id][:raw].visits_number).collect{ |visit_index| "#{id}_#{visit_index}_#{services_data[id][:raw].visits_number}" } }).flatten
       assert_equal vrp.visits, all_ids.size
@@ -216,7 +216,7 @@ class HeuristicTest < Minitest::Test
       assert_equal vrp.services.size - 2, s.instance_variable_get(:@candidate_services_ids).size
       s.send(:clean_stops, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:stops].first[:id], 'reason')
       assert_equal 0, s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:stops].size
-      assert(s.instance_variable_get(:@uninserted).none?{ |id, _info| id.include?('service_2') })
+      assert(s.instance_variable_get(:@uninserted).none?{ |un| un[0] == 'service_2' })
       assert_equal vrp.services.size - 1, s.instance_variable_get(:@candidate_services_ids).size # service 2 can be assigned again
     end
 
@@ -635,6 +635,73 @@ class HeuristicTest < Minitest::Test
       s = Wrappers::PeriodicHeuristic.new(vrp)
       assert_equal [7, 7, nil], (s.instance_variable_get(:@services_data).collect{ |_id, data| data[:heuristic_period] })
       assert_equal 3, s.instance_variable_get(:@uninserted).size, 'service_3 can no have a lapse multiple of 7, we can reject it immediatly'
+    end
+
+    def test_deduce_number_in_sequence
+      vrp = TestHelper.create(VRP.periodic)
+      vrp.vehicles = TestHelper.expand_vehicles(vrp)
+      s = Wrappers::PeriodicHeuristic.new(vrp)
+
+      candidate_routes = { 'vehicle_0' => (0..365).collect{ |day| [day, stops: []] }.to_h }
+      candidate_routes['vehicle_0'][9][:stops] << { id: 'service_1', number_in_sequence: 1 }
+      candidate_routes['vehicle_0'][29][:stops] << { id: 'service_1', number_in_sequence: 2 }
+      candidate_routes['vehicle_0'][259][:stops] << { id: 'service_1', number_in_sequence: 3 }
+      candidate_routes['vehicle_0'][364][:stops] << { id: 'service_1', number_in_sequence: 4 }
+      s.instance_variable_set(:@candidate_routes, candidate_routes)
+
+      s.instance_variable_get(:@services_data)['service_1'][:used_vehicles] = ['vehicle_0']
+      s.instance_variable_get(:@services_data)['service_1'][:used_days] = [9, 29, 259, 364]
+      s.instance_variable_get(:@services_data)['service_1'][:assigned_visits] = [1, 2, 3, 4]
+
+      assert_equal [4, 5], s.send(:deduce_number_in_sequence, 344, 'service_1')
+      assert_equal 5, s.instance_variable_get(:@candidate_routes)['vehicle_0'][364][:stops][0][:number_in_sequence]
+      s.instance_variable_get(:@services_data)['service_1'][:used_days] << 344
+      s.instance_variable_get(:@services_data)['service_1'][:assigned_visits] << 5
+      s.instance_variable_get(:@candidate_routes)['vehicle_0'][344][:stops] << { id: 'service_1', number_in_sequence: 4 }
+
+      assert_equal [4, 6], s.send(:deduce_number_in_sequence, 324, 'service_1')
+      assert_equal 5, s.instance_variable_get(:@candidate_routes)['vehicle_0'][344][:stops][0][:number_in_sequence]
+      assert_equal 6, s.instance_variable_get(:@candidate_routes)['vehicle_0'][364][:stops][0][:number_in_sequence]
+    end
+
+    def test_deduce_number_in_sequence_case_no_need_shift
+      problem2 = VRP.periodic
+      problem2[:services].first[:minimum_lapse] = 1
+      problem2[:services].first[:maximum_lapse] = 1
+      problem2[:services].first[:visits_number] = 2
+      problems = [VRP.periodic, problem2]
+
+      problems.each_with_index{ |problem, p_i|
+        vrp = TestHelper.create(problem)
+        vrp.vehicles = TestHelper.expand_vehicles(vrp)
+        s = Wrappers::PeriodicHeuristic.new(vrp)
+
+        candidate_routes = { 'vehicle_0' => (0..6).collect{ |day| [day, stops: []] }.to_h }
+        candidate_routes['vehicle_0'][0][:stops] << { id: 'service_1', number_in_sequence: 1 }
+        candidate_routes['vehicle_0'][3][:stops] << { id: 'service_1', number_in_sequence: 4 }
+        candidate_routes['vehicle_0'][4][:stops] << { id: 'service_1', number_in_sequence: 5 }
+        s.instance_variable_set(:@candidate_routes, candidate_routes)
+
+        s.instance_variable_get(:@services_data)['service_1'][:used_vehicles] = ['vehicle_0']
+        s.instance_variable_get(:@services_data)['service_1'][:used_days] = [0, 3, 4]
+        s.instance_variable_get(:@services_data)['service_1'][:assigned_visits] = [1, 4, 5]
+
+        if p_i == 0
+          assert_equal [2, 2], s.send(:deduce_number_in_sequence, 2, 'service_1')
+        else
+          assert_equal [3, 3], s.send(:deduce_number_in_sequence, 2, 'service_1')
+        end
+
+        assert_equal 4, s.instance_variable_get(:@candidate_routes)['vehicle_0'][3][:stops][0][:number_in_sequence]
+
+        next unless p_i == 0
+
+        s.instance_variable_get(:@services_data)['service_1'][:used_days] << 2
+        s.instance_variable_get(:@services_data)['service_1'][:assigned_visits] << 2
+        s.instance_variable_get(:@candidate_routes)['vehicle_0'][2][:stops] << { id: 'service_1', number_in_sequence: 2 }
+
+        assert_equal [6, 6], s.send(:deduce_number_in_sequence, 5, 'service_1')
+      }
     end
   end
 end
